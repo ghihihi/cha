@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>For My Favorite Person</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:linear-gradient(135deg,#e6d5f0 0%,#d9c3e8 50%,#cdb1e0 100%);min-height:100vh;padding:20px;overflow-x:hidden}
+    .music-player{position:fixed;top:20px;right:20px;z-index:9000;background:linear-gradient(135deg,#9b6bb8 0%,#6b4a8f 100%);border:none;color:white;width:50px;height:50px;border-radius:50%;cursor:pointer;font-size:24px;box-shadow:0 5px 15px rgba(107,74,143,0.3);display:flex;align-items:center;justify-content:center}
+    .music-player-tooltip{position:absolute;bottom:-40px;right:0;background:rgba(0,0,0,.8);color:#fff;padding:8px 12px;border-radius:8px;font-size:12px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .3s}
+    .music-player:hover .music-player-tooltip{opacity:1}
+    .scroll-to-top{position:fixed;bottom:30px;right:30px;background:linear-gradient(135deg,#9b6bb8 0%,#6b4a8f 100%);color:white;border:none;width:50px;height:50px;border-radius:50%;cursor:pointer;font-size:24px;box-shadow:0 5px 15px rgba(107,74,143,0.3);display:none;align-items:center;justify-content:center;z-index:8999}
+    .scroll-to-top.show{display:flex}
+    .nav-tabs{display:flex;gap:10px;justify-content:center;margin-bottom:30px;flex-wrap:wrap}
+    .nav-button{padding:12px 24px;background:linear-gradient(135deg,#9b6bb8 0%,#6b4a8f 100%);color:white;border:none;border-radius:25px;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 5px 15px rgba(107,74,143,0.3)}
+    .nav-button.active{background:linear-gradient(135deg,#6b4a8f 0%,#4a3363 100%)}
+    .section{display:none}
+    .section.active{display:block}
+    .container{background:rgba(255,255,255,.95);border-radius:30px;box-shadow:0 20px 60px rgba(107,74,143,.2);padding:50px 40px;max-width:900px;margin:0 auto;text-align:center;backdrop-filter:blur(10px);border:2px solid rgba(155,107,184,.1)}
+    h1{font-size:32px;color:#6b4a8f;margin-bottom:15px;font-weight:600;letter-spacing:1px}
+    h2{font-size:28px;color:#6b4a8f;margin-bottom:30px;font-weight:600}
+    .subtitle{font-size:16px;color:#666;margin-bottom:40px;font-weight:300;line-height:1.6}
+    .hint{font-size:12px;color:#999;margin-top:30px;font-style:italic}
+
+    /* Night sky */
+    .night-sky-container{background:transparent;border-radius:30px;padding:50px 40px;max-width:900px;margin:0 auto;text-align:center;position:relative;z-index:2}
+    .night-sky-container h2{color:#e6d5f0;margin-bottom:15px;font-size:32px;text-shadow:0 0 20px rgba(230,213,240,.5)}
+    .night-sky-subtitle{font-size:16px;color:#d9c3e8;margin-bottom:18px;font-weight:300;line-height:1.6}
+    .stars-container{position:relative;width:100%;height:600px;margin:0 auto;max-width:900px;background:transparent;z-index:1;overflow:hidden;border-radius:16px}
+    /* canvas for lines sits under stars (z-index:1) */
+    #starsCanvas{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none}
+    /* stars are above canvas */
+    .star{position:absolute;cursor:pointer;user-select:none;transition:transform .25s ease,filter .25s ease;filter:drop-shadow(0 0 6px rgba(230,213,240,.35));z-index:3;display:flex;align-items:center;justify-content:center;transform-origin:center center}
+    .star:hover{transform:scale(1.35);filter:drop-shadow(0 0 15px rgba(230,213,240,.8))}
+    .star.brightest{font-size:54px;filter:drop-shadow(0 0 22px rgba(255,240,200,.95));z-index:4}
+    .stars-legend{display:flex;gap:18px;justify-content:center;margin-top:12px;color:#d9c3e8;font-weight:600}
+    .legend-item{display:flex;gap:8px;align-items:center;font-size:14px;color:#d9c3e8}
+    .stars-discovered{color:#d9c3e8;font-size:14px;margin-top:18px;font-weight:500}
+
+    /* responsive */
+    @media(max-width:900px){.stars-container{height:500px}}
+    @media(max-width:600px){.stars-container{height:420px}.star.brightest{font-size:46px}}
+  </style>
+</head>
+<body>
+  <button class="music-player" id="musicPlayer" onclick="toggleMusic()" title="Toggle background music">🎵<div class="music-player-tooltip">This Town - Niall Horan</div></button>
+  <button class="scroll-to-top" id="scrollToTop" onclick="scrollToTop()" title="Scroll to top">↑</button>
+  <audio id="audioPlayer"></audio>
+
+  <div class="nav-tabs">
+    <button class="nav-button active" onclick="showSection('home')">🏠 Home</button>
+    <button class="nav-button" onclick="showSection('photos')">📸 Photos</button>
+    <button class="nav-button" onclick="showSection('puzzle')">🧩 Puzzle</button>
+    <button class="nav-button" onclick="showSection('sky')">🌙 Night Sky</button>
+    <button class="nav-button" onclick="showSection('flowers')">💮 Flowers</button>
+    <button class="nav-button" onclick="showSection('songs')">🎵 Songs</button>
+  </div>
+
+  <!-- HOME (kept minimal for brevity) -->
+  <div id="home" class="section active"><div class="container"><h1>To the girl who always makes me happy</h1><p class="subtitle">Click the heart below to see why you mean everything to me:</p><div style="margin:30px 0"><div class="heart" onclick="showMessage(event)" style="font-size:80px">❤️</div></div><p class="hint">Baby try clicking the heart 20 times slowly!</p></div></div>
+
+  <!-- PHOTOS -->
+  <div id="photos" class="section"><div class="container"><h2>✨ Celestial ✨</h2><p class="subtitle">You're as special as the stars in the sky.</p><div id="photoGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:15px"></div></div></div>
+
+  <!-- PUZZLE (unchanged) -->
+  <div id="puzzle" class="section"><div class="container"><h2>🧩 Puzzle 🧩</h2><p class="subtitle">You're like a puzzle and I love every piece of you.</p><div id="puzzleCanvas" style="background:white;border:4px solid #9b6bb8;border-radius:15px;width:400px;height:400px;margin:0 auto"></div></div></div>
+
+  <!-- NIGHT SKY -->
+  <div id="sky" class="section" style="background:linear-gradient(180deg,#0a0e27 0%,#1a1a3e 50%,#0a0e27 100%);padding:40px 20px;min-height:100vh">
+    <div class="night-sky-container">
+      <h2>🌙 A Sky Full of Things I Never Want You to Forget</h2>
+      <p class="night-sky-subtitle">Every star holds something I wanted to tell you. Click to discover... ✨</p>
+
+      <div class="stars-container" id="starsContainer">
+        <!-- canvas and stars are injected here -->
+      </div>
+
+      <div class="stars-legend" id="starsLegend" aria-hidden="false">
+        <div class="legend-item">⭐ Memory</div>
+        <div class="legend-item">💜 Compliment</div>
+        <div class="legend-item">🌠 Wish</div>
+        <div class="legend-item">🤫 Secret</div>
+      </div>
+
+      <div class="stars-discovered" id="starsDiscovered">Stars discovered: 0/20</div>
+    </div>
+  </div>
+
+  <!-- Star modal -->
+  <div id="starMessageModal" class="star-message-modal" style="display:none;position:fixed;z-index:9500;left:0;top:0;width:100%;height:100%;background-color:rgba(10,14,39,.9);align-items:center;justify-content:center" onclick="closeStarMessage(event)">
+    <div class="star-message-content" style="background:linear-gradient(135deg,rgba(155,107,184,.95) 0%,rgba(107,74,143,.95)100%);border-radius:20px;padding:40px;max-width:500px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.5);text-align:center" onclick="event.stopPropagation()">
+      <button onclick="closeStarMessage()" style="position:absolute;top:12px;right:12px;background:rgba(255,255,255,.2);color:white;border:none;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer">×</button>
+      <div id="starMessageEmoji" style="font-size:48px;margin-bottom:10px">✨</div>
+      <div id="starMessageType" style="display:inline-block;background:rgba(255,255,255,.2);color:#e6d5f0;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:12px">Memory</div>
+      <div id="starMessageText" style="color:#f5f5f5;font-size:18px;line-height:1.8;margin-top:12px;font-weight:300">Message</div>
+    </div>
+  </div>
+
+  <script>
+    // Configuration and messages (20 items; last one is brightest)
+    const STAR_MESSAGES = [
+      {type:'Memory', emoji:'⭐', message:"I still remember the first time we talked for hours. I didn't realize how quickly you'd become someone important to me."},
+      {type:'Compliment', emoji:'💜', message:"One thing I love about you is how you make people feel comfortable without even trying."},
+      {type:'Wish', emoji:'🌠', message:"I hope someday we'll watch the sunset together and talk about everything and nothing."},
+      {type:'Secret', emoji:'🤫', message:"Sometimes I catch myself smiling because of a conversation we had hours ago."},
+      {type:'Memory', emoji:'⭐', message:"I love how you laugh at my jokes, even the bad ones. It makes me feel special."},
+      {type:'Compliment', emoji:'💜', message:"Your kindness isn't just something you do, it's who you are. And I admire that so much."},
+      {type:'Wish', emoji:'🌠', message:"I want to be the person you run to when you're happy, sad, or just need someone to listen."},
+      {type:'Secret', emoji:'🤫', message:"You're the reason I believe in second chances and better tomorrows."},
+      {type:'Memory', emoji:'⭐', message:"I remember telling you things I've never told anyone. Thank you for being someone I can trust."},
+      {type:'Compliment', emoji:'💜', message:"You have this light in your eyes that makes everything feel less complicated and more hopeful."},
+      {type:'Wish', emoji:'🌠', message:"I dream about a future where we build something beautiful together, something that lasts."},
+      {type:'Secret', emoji:'🤫', message:"I think about the little things you do. The way you smile, the way you care. It means everything."},
+      {type:'Memory', emoji:'⭐', message:"You changed me in ways I didn't expect. Made me believe that I'm worthy of love again."},
+      {type:'Compliment', emoji:'💜', message:"Your strength inspires me to be better. Your dreams inspire me to support you in everything."},
+      {type:'Wish', emoji:'🌠', message:"I wish I could freeze moments with you, so we could relive them whenever we want."},
+      {type:'Secret', emoji:'🤫', message:"You don't know this, but you've saved me more times than I can count just by being there."},
+      {type:'Memory', emoji:'⭐', message:"The day I met you, I didn't know my life would change this beautifully."},
+      {type:'Compliment', emoji:'💜', message:"You make being honest feel safe. You make being vulnerable feel like strength."},
+      {type:'Wish', emoji:'🌠', message:"I want to grow old with you, learning something new about you every single day."},
+      {type:'Brightest Star', emoji:'🌟', message:"Out of all the stars here, this one is my favorite. Just like out of everyone I've met, you're my favorite person."}
+    ];
+
+    const CONFIG = {
+      minDistanceDesktop: 110,
+      minDistanceMobile: 60,
+      margin: 40,
+      neighbors: 2
+    };
+
+    const state = {
+      discovered: new Set(),
+      starPositions: [],
+      starEdges: [],
+      starInitialized: false,
+      isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    };
+
+    // Utility: debounce
+    function debounce(fn, ms){let t;return (...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)}}
+
+    // Initialize when Night Sky tab is shown
+    function showSection(id){
+      document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+      document.querySelectorAll('.nav-button').forEach(b=>b.classList.remove('active'));
+      const buttons = Array.from(document.querySelectorAll('.nav-button'));
+      const sections = ['home','photos','puzzle','sky','flowers','songs'];
+      const idx = sections.indexOf(id);
+      if(idx>=0) buttons[idx].classList.add('active');
+      document.getElementById(id).classList.add('active');
+      window.scrollTo({top:0,behavior:'smooth'});
+      if(id==='sky' && !state.starInitialized) {
+        // small timeout to allow layout to become visible
+        setTimeout(()=>{ initStars(); state.starInitialized = true }, 60);
+      }
+    }
+
+    // If the page loads with sky already visible, init immediately
+    window.addEventListener('DOMContentLoaded', () => {
+      // create photo grid placeholder (keeps earlier features working)
+      const grid = document.getElementById('photoGrid');
+      if(grid){
+        const PHOTOS = [
+          'https://raw.githubusercontent.com/redzkii/cha/main/911cae49-f4bd-45d6-b949-7e5eff86f733.jfif',
+          'https://raw.githubusercontent.com/redzkii/cha/main/381350d7-f209-41cb-b5e9-99f39ea1ac3b.jfif',
+          'https://raw.githubusercontent.com/redzkii/cha/main/13e9ea99-77f1-490c-8158-4713749616a6.jfif',
+          'https://raw.githubusercontent.com/redzkii/cha/main/05358380-3f13-4533-974d-0529d62fc69e.jfif',
+          'https://raw.githubusercontent.com/redzkii/cha/main/1000056467.jpg',
+          'https://raw.githubusercontent.com/redzkii/cha/main/1000056468.jpg',
+          'https://raw.githubusercontent.com/redzkii/cha/main/e008bb90-c236-434c-8983-114d775318f6.jfif',
+          'https://raw.githubusercontent.com/redzkii/cha/main/eb50409b-6048-4aeb-8265-398eea7483c1.jfif'
+        ];
+        grid.innerHTML = '';
+        PHOTOS.forEach(src=>{
+          const d = document.createElement('div');
+          d.style.borderRadius='12px';
+          d.style.overflow='hidden';
+          d.style.aspectRatio='1';
+          d.innerHTML = `<img src="${src}" style="width:100%;height:100%;object-fit:cover">`;
+          grid.appendChild(d);
+        });
+      }
+
+      // if sky is visible on load, init immediately
+      if(document.getElementById('sky').classList.contains('active')){
+        setTimeout(()=>{ initStars(); state.starInitialized = true }, 60);
+      }
+    });
+
+    // initStars: builds positions, elements, and draws constellation canvas
+    function initStars(){
+      const container = document.getElementById('starsContainer');
+      if(!container) return;
+
+      // clear previous
+      container.innerHTML = '';
+
+      // create canvas for lines
+      const canvas = document.createElement('canvas');
+      canvas.id = 'starsCanvas';
+      canvas.style.position = 'absolute';
+      canvas.style.top = '0';
+      canvas.style.left = '0';
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
+      canvas.style.zIndex = '1';
+      canvas.style.pointerEvents = 'none';
+      container.appendChild(canvas);
+
+      // compute size; if zero (hidden), try again shortly
+      const rect = container.getBoundingClientRect();
+      let width = rect.width || container.clientWidth;
+      let height = rect.height || container.clientHeight;
+      if(width < 20 || height < 20){
+        // if container is still not laid out, retry shortly
+        setTimeout(initStars, 80);
+        return;
+      }
+      canvas.width = Math.max(1, Math.floor(width));
+      canvas.height = Math.max(1, Math.floor(height));
+
+      // star count (should be 20)
+      const count = STAR_MESSAGES.length;
+
+      const minDist = state.isMobile ? CONFIG.minDistanceMobile : CONFIG.minDistanceDesktop;
+      const positions = generateStarPositions(count, minDist, width, height, CONFIG.margin);
+      state.starPositions = positions;
+
+      // build edges (nearest neighbors), and extra connections to brightest (last)
+      const edges = buildStarEdges(positions, {neighbors: CONFIG.neighbors, maxDistance: Math.max(220, width * 0.45)});
+      state.starEdges = edges;
+
+      // create DOM star nodes (above canvas)
+      positions.forEach((p, i) => {
+        const star = document.createElement('div');
+        star.className = 'star';
+        const msg = STAR_MESSAGES[i] || {};
+        const isBright = (i === positions.length - 1);
+
+        // set size and content
+        if(isBright){
+          star.classList.add('brightest');
+          star.textContent = msg.emoji || '🌟';
+        } else {
+          const size = 12 + Math.floor(Math.random() * 26); // 12-37
+          star.style.fontSize = size + 'px';
+          star.textContent = (msg && msg.emoji) ? msg.emoji : ['✨','⭐','🌠'][Math.floor(Math.random()*3)];
+        }
+
+        // center transform
+        star.style.left = (p.x) + 'px';
+        star.style.top = (p.y) + 'px';
+        star.style.transform = 'translate(-50%,-50%)';
+        star.dataset.index = i;
+        star.addEventListener('click', (e)=>{ e.stopPropagation(); onStarClick(i); });
+        container.appendChild(star);
+      });
+
+      // draw constellation lines
+      drawConstellationLines(canvas, positions, edges);
+
+      // update discovered label
+      document.getElementById('starsDiscovered').textContent = `Stars discovered: ${state.discovered.size}/${count}`;
+
+      // redraw on resize (debounced)
+      const onResize = debounce(()=>{
+        // keep discovered set but regenerate layout
+        initStars();
+      }, 180);
+      window.removeEventListener('resize', state._resizeHandler);
+      state._resizeHandler = onResize;
+      window.addEventListener('resize', onResize);
+    }
+
+    // Generate positions with min distance using rejection sampling
+    function generateStarPositions(count, minDist, width, height, margin){
+      const positions = [];
+      const maxAttempts = 400;
+      const effectiveMin = Math.min(minDist, Math.min(width, height) / 3);
+
+      for(let i=0;i<count;i++){
+        let placed=false, attempts=0;
+        while(!placed && attempts < maxAttempts){
+          attempts++;
+          const x = margin + Math.random() * Math.max(0, width - margin*2);
+          const y = margin + Math.random() * Math.max(0, height - margin*2);
+          let ok = true;
+          for(const p of positions){
+            const dx = p.x - x, dy = p.y - y;
+            if(Math.hypot(dx,dy) < effectiveMin){ ok=false; break; }
+          }
+          if(ok){ positions.push({x,y}); placed=true; break; }
+        }
+        if(!placed){
+          // relax constraint a bit
+          let retries=0;
+          while(!placed && retries<80){
+            retries++;
+            const x = margin + Math.random() * Math.max(0, width - margin*2);
+            const y = margin + Math.random() * Math.max(0, height - margin*2);
+            let ok=true;
+            for(const p of positions){
+              const dx = p.x - x, dy = p.y - y;
+              if(Math.hypot(dx,dy) < effectiveMin * 0.6){ ok=false; break; }
+            }
+            if(ok){ positions.push({x,y}); placed=true; break; }
+          }
+          if(!placed) positions.push({x: margin + Math.random() * Math.max(0, width - margin*2), y: margin + Math.random() * Math.max(0, height - margin*2)});
+        }
+      }
+      // ensure brightest star is placed near center-ish for focal pattern
+      const brightIdx = positions.length - 1;
+      positions[brightIdx] = {x: width * 0.55, y: height * 0.35};
+      return positions;
+    }
+
+    // Build edges: each star connects to k nearest neighbors if within maxDistance
+    function buildStarEdges(positions, opts={}) {
+      const neighbors = opts.neighbors || 2;
+      const maxDistance = opts.maxDistance || 400;
+      const edges = new Set();
+      for(let i=0;i<positions.length;i++){
+        const arr=[];
+        for(let j=0;j<positions.length;j++){
+          if(i===j) continue;
+          const dx = positions[i].x - positions[j].x, dy = positions[i].y - positions[j].y;
+          arr.push({index:j, dist: Math.hypot(dx,dy)});
+        }
+        arr.sort((a,b)=>a.dist-b.dist);
+        let count=0;
+        for(let k=0;k<arr.length && count<neighbors;k++){
+          const n = arr[k];
+          if(n.dist <= maxDistance){
+            const a=Math.min(i,n.index), b=Math.max(i,n.index);
+            edges.add(`${a}-${b}`); count++;
+          }
+        }
+      }
+      // make sure brightest star (last) has extra 3 connections
+      const bright = positions.length - 1;
+      const arrBright = [];
+      for(let j=0;j<bright;j++){
+        const dx = positions[bright].x - positions[j].x, dy = positions[bright].y - positions[j].y;
+        arrBright.push({index:j, dist: Math.hypot(dx,dy)});
+      }
+      arrBright.sort((a,b)=>a.dist-b.dist);
+      for(let k=0;k<Math.min(3,arrBright.length);k++){
+        const j = arrBright[k].index;
+        const a=Math.min(bright,j), b=Math.max(bright,j);
+        edges.add(`${a}-${b}`);
+      }
+      return Array.from(edges).map(s=>{const [a,b]=s.split('-').map(Number);return {a,b}});
+    }
+
+    // Draw lines (glowy gradient)
+    function drawConstellationLines(canvas, positions, edges){
+      if(!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = Math.max(1, Math.floor(rect.width));
+      canvas.height = Math.max(1, Math.floor(rect.height));
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+
+      ctx.lineCap = 'round';
+      edges.forEach(e=>{
+        const a = positions[e.a], b = positions[e.b];
+        const grad = ctx.createLinearGradient(a.x,a.y,b.x,b.y);
+        grad.addColorStop(0, 'rgba(229,208,244,0.16)');
+        grad.addColorStop(0.5, 'rgba(255,255,255,0.22)');
+        grad.addColorStop(1, 'rgba(229,208,244,0.12)');
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.lineWidth = 1.2;
+        ctx.strokeStyle = grad;
+        ctx.shadowColor = 'rgba(155,107,184,0.45)';
+        ctx.shadowBlur = 8;
+        ctx.stroke();
+      });
+
+      // Highlight brightest star edges
+      const bright = positions.length - 1;
+      edges.filter(e => e.a === bright || e.b === bright).forEach(edge=>{
+        const a = positions[edge.a], b = positions[edge.b];
+        ctx.beginPath();
+        ctx.moveTo(a.x,a.y);
+        ctx.lineTo(b.x,b.y);
+        ctx.lineWidth = 2.2;
+        ctx.strokeStyle = 'rgba(255,240,200,0.95)';
+        ctx.shadowColor = 'rgba(255,240,200,0.45)';
+        ctx.shadowBlur = 16;
+        ctx.stroke();
+      });
+    }
+
+    // Star click handler
+    function onStarClick(index){
+      const msg = STAR_MESSAGES[index] || {type:'',emoji:'✨',message:''};
+      document.getElementById('starMessageEmoji').textContent = msg.emoji;
+      document.getElementById('starMessageType').textContent = msg.type;
+      document.getElementById('starMessageText').textContent = msg.message;
+      document.getElementById('starMessageModal').style.display = 'flex';
+      if(!state.discovered.has(index)){
+        state.discovered.add(index);
+        document.getElementById('starsDiscovered').textContent = `Stars discovered: ${state.discovered.size}/${STAR_MESSAGES.length}`;
+      }
+      // small click feedback
+      try{ const el = document.querySelector(`.star[data-index="${index}"]`); if(el){ el.animate([{transform:'scale(1)'},{transform:'scale(1.25)'},{transform:'scale(1)'}],{duration:300}) } }catch(e){}
+    }
+
+    function closeStarMessage(e){
+      if(e && e.target && e.target.id !== 'starMessageModal' && e.target !== document.getElementById('starMessageModal')) return;
+      document.getElementById('starMessageModal').style.display = 'none';
+    }
+
+    // small helpers for other UI bits (music, heart) — minimal safe implementations
+    let audio;
+    function toggleMusic(){
+      if(!audio) audio = document.getElementById('audioPlayer');
+      if(!audio.src) audio.src = '';
+      if(audio.paused){ audio.play().catch(()=>{}); document.getElementById('musicPlayer').classList.add('playing') }
+      else { audio.pause(); audio.currentTime = 0; document.getElementById('musicPlayer').classList.remove('playing') }
+    }
+
+    function showMessage(e){
+      // simplified: reveal a small message and animate confetti
+      alert("I love you ❤️");
+    }
+
+    function scrollToTop(){ window.scrollTo({top:0,behavior:'smooth'}) }
+
+    // Ensure stars are initialized when user switches to Sky tab using nav buttons also keyboard/tab navigation
+    // (Already handled within showSection), but also initialize if someone navigates via direct link to #sky
+    window.addEventListener('hashchange', ()=>{ if(location.hash.includes('sky') && !state.starInitialized) { initStars(); state.starInitialized = true } });
+
+  </script>
+</body>
+</html>
