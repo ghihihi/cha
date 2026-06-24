@@ -488,6 +488,7 @@
       border-radius: 12px;
       padding: 20px;
       width: 400px;
+      position: relative;
     }
 
     .puzzle-piece {
@@ -845,6 +846,7 @@
       background: linear-gradient(180deg, #0a0e27 0%, #1a1a3e 50%, #0a0e27 100%);
       padding: 40px 20px;
       min-height: 100vh;
+      position: relative;
     }
 
     .night-sky-container {
@@ -926,6 +928,7 @@
       margin-top: 12px;
       color: #d9c3e8;
       font-weight: 600;
+      flex-wrap: wrap;
     }
 
     .legend-item {
@@ -998,7 +1001,6 @@
       border-radius: 20px;
       font-size: 12px;
       font-weight: 600;
-      margin-bottom: 12px;
     }
 
     #starMessageText {
@@ -1183,6 +1185,22 @@
       .star.brightest {
         font-size: 46px;
       }
+
+      .night-sky-container {
+        padding: 30px 20px;
+      }
+
+      .night-sky-container h2 {
+        font-size: 24px;
+      }
+
+      .stars-legend {
+        gap: 10px;
+      }
+
+      .legend-item {
+        font-size: 12px;
+      }
     }
 
     @media (max-width: 400px) {
@@ -1230,6 +1248,10 @@
 
       .password-container {
         padding: 20px 15px;
+      }
+
+      .stars-container {
+        height: 350px;
       }
     }
 
